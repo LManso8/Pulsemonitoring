@@ -1,0 +1,19 @@
+# Acquisition Module
+
+## Purpose
+
+Read and validate vibration data stored in CSV files.
+
+## Responsibilities
+
+- CSV file reading
+- Data validation
+- Data organization
+
+## Input
+
+CSV files
+
+## Output
+
+Structured vibration data
