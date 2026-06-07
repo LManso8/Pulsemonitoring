@@ -21,11 +21,11 @@ The system was designed to provide a portable, low-cost and scalable vibration m
 ## Hardware Architecture
 
 Accelerometer
-↓
+->
 ADC
-↓
+->
 Raspberry Pi
-↓
+->
 CSV File
 
 ---
