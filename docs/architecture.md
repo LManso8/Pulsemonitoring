@@ -19,7 +19,7 @@ Accelerometer
 ↓
 ADC
 ↓
-CSV Data
+JSON Data
 ↓
 Acquisition
 ↓
