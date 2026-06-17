@@ -56,7 +56,7 @@ The software subsystem is divided into four stages:
 
 ### Acquisition
 
-Reads vibration data from CSV files.
+Reads vibration data from JSON files.
 
 ### Processing
 
