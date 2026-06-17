@@ -20,11 +20,11 @@ Lower cost, easier integration and improved portability.
 
 ### Initial Format
 
-JSON
+JSON or CSV
 
 ### Final Format
 
-CSV
+JSON
 
 ### Reason
 
