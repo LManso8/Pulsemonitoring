@@ -1,0 +1,135 @@
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
+import { createClient } from '@supabase/supabase-js'
+
+// ─── Configuração ──────────────────────────────────────────────────────────────
+const SERVER       = import.meta.env.VITE_SERVER_URL ?? 'http://localhost:5000'
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? 'https://lyjlhimejffjbsefonqh.supabase.co'
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY ?? 'sb_publishable_8dc3LXKIAluAkGgH4kqDBQ_SJ2gC2QB'
+
+const MAX_PONTOS = 300
+const DEADZONE   = 0.05   // m/s²
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+// ─── Utilitários ───────────────────────────────────────────────────────────────
+function applyDeadzone(v) {
+  return Math.abs(v) <= DEADZONE ? 0 : v
+}
+
+function labelCurto(t) {
+  if (!t) return ''
+  const partes = String(t).split(' ')
+  return partes[1]?.split('.')[0] ?? t
+}
+
+// Buffer sempre cheio (zeros à esquerda) — garante rolo contínuo no recharts
+export function withPadding(arr, size = MAX_PONTOS) {
+  if (arr.length >= size) return arr
+  const padding = Array.from({ length: size - arr.length }, () => ({
+    t: null, t_label: '', ax: 0, ay: 0, az: 0,
+  }))
+  return [...padding, ...arr]
+}
+
+// ─── Context ───────────────────────────────────────────────────────────────────
+const SeismicContext = createContext(null)
+
+export function SeismicProvider({ children }) {
+  const [dados,         setDados]  = useState([])
+  const [ligado,        setLigado] = useState(false)
+  const [totalAmostras, setTotal]  = useState(0)
+  const [ultimoEvento,  setUltimo] = useState('—')
+  const [erro,          setErro]   = useState(null)
+  const evtRef   = useRef(null)
+  const retryRef = useRef(null)
+
+  const adicionarAmostras = useCallback((novas) => {
+    setDados((prev) => [
+      ...prev,
+      ...novas.map((a) => ({
+        t:       a.t,
+        t_label: labelCurto(a.t),
+        ax: applyDeadzone(parseFloat(a.ax) || 0),
+        ay: applyDeadzone(parseFloat(a.ay) || 0),
+        az: applyDeadzone(parseFloat(a.az) || 0),
+      })),
+    ].slice(-MAX_PONTOS))
+    setTotal((n) => n + novas.length)
+    if (novas.length) setUltimo(labelCurto(novas[novas.length - 1].t))
+  }, [])
+
+  // Histórico inicial — vem do Supabase
+  useEffect(() => {
+    supabase
+      .from('amostras')
+      .select('evento_id, data_hora, ax_ms2, ay_ms2, az_ms2')
+      .order('id', { ascending: false })
+      .limit(MAX_PONTOS)
+      .then(({ data, error }) => {
+        if (error) { console.error('[SUPABASE]', error); return }
+        if (!data?.length) return
+        const hist = data.reverse().map((r) => ({
+          evento_id: r.evento_id,
+          t:         r.data_hora,
+          ax:        r.ax_ms2 ?? 0,
+          ay:        r.ay_ms2 ?? 0,
+          az:        r.az_ms2 ?? 0,
+        }))
+        adicionarAmostras(hist)
+      })
+  }, [adicionarAmostras])
+
+  // SSE — tempo real via Flask local (uma só ligação para toda a app)
+  useEffect(() => {
+    const ligar = () => {
+      const es = new EventSource(`${SERVER}/stream`)
+      evtRef.current = es
+
+      es.onopen = () => { setLigado(true); setErro(null) }
+
+      es.onmessage = (e) => {
+        try {
+          const payload = JSON.parse(e.data)
+          if (payload.tipo === 'amostras') adicionarAmostras(payload.dados)
+        } catch { /* ignora */ }
+      }
+
+      es.onerror = () => {
+        setLigado(false)
+        setErro('Sem ligação ao servidor — a tentar novamente…')
+        es.close()
+        retryRef.current = setTimeout(ligar, 3000)
+      }
+    }
+
+    ligar()
+    return () => {
+      evtRef.current?.close()
+      clearTimeout(retryRef.current)
+    }
+  }, [adicionarAmostras])
+
+  // waveformData: buffer sempre com MAX_PONTOS entradas
+  const waveformData = withPadding(dados, MAX_PONTOS)
+
+  return (
+    <SeismicContext.Provider value={{
+      dados,
+      waveformData,
+      ligado,
+      totalAmostras,
+      ultimoEvento,
+      erro,
+      MAX_PONTOS,
+      DEADZONE,
+    }}>
+      {children}
+    </SeismicContext.Provider>
+  )
+}
+
+export function useSeismic() {
+  const ctx = useContext(SeismicContext)
+  if (!ctx) throw new Error('useSeismic must be used inside <SeismicProvider>')
+  return ctx
+}
