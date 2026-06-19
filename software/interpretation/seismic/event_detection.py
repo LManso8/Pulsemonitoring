@@ -3,66 +3,77 @@ event_detection.py - Módulo de Deteção Sísmica e Escala de Mercalli
 ===================================================================
 Contém a lógica de negócio para processar eventos transitórios e traduzir 
 a Velocidade de Pico do Solo (PGV) para a Escala de Intensidade de 
-Mercalli Modificada (MMI), baseada nas correlações de Wald et al. (1999).
+Mercalli Modificada (MMI), aplicando as equações logarítmicas empíricas.
 """
 
 import numpy as np
+import math
 
-def calcular_pgv(vx, vy, vz):
+def calcular_pgv(vx, vy, vz, metodo="vetor_3d"):
     """
     Calcula a Velocidade de Pico do Solo (Peak Ground Velocity - PGV).
-    Na sismologia moderna, em contraste com a raiz quadrada geométrica do 
-    PVS estrutural, o PGV é frequentemente analisado pelo valor máximo 
-    absoluto registado nos eixos ortogonais.
     
-    Retorna:
-    pgv_mm_s (float) : Velocidade máxima absoluta registada (mm/s).
+    Parâmetros:
+    vx, vy, vz : Arrays de velocidade integrada em mm/s.
+    metodo     : 'vetor_3d' (Norma Euclidiana) ou 'eixo_isolado'.
     """
-    # Extrai o pico máximo absoluto transversal a todos os eixos
-    pgv = float(np.max([np.max(np.abs(vx)), np.max(np.abs(vy)), np.max(np.abs(vz))]))
+    if metodo == "vetor_3d":
+        # Fórmula: Máximo da raiz quadrada da soma dos quadrados dos três eixos
+        vetor_resultante = np.sqrt(vx**2 + vy**2 + vz**2)
+        pgv = float(np.max(vetor_resultante))
+    else:
+        # Fórmula: Pico máximo absoluto transversal a todos os eixos
+        pgv = float(np.max([np.max(np.abs(vx)), np.max(np.abs(vy)), np.max(np.abs(vz))]))
+        
     return pgv
+
+def equacao_wald_mercalli(pgv_mm_s):
+    """
+    Aplica a equação empírica de Wald et al. (1999) para correlação
+    entre a velocidade instrumental (PGV) e a intensidade macrossísmica.
+    
+    A fórmula original de Wald utiliza cm/s. Como o nosso sinal
+    está em mm/s, aplicamos o fator de conversão (pgv / 10).
+    """
+    # Conversão de mm/s para cm/s (requisito da equação empírica)
+    pgv_cm_s = pgv_mm_s / 10.0
+    
+    # Prevenção de logaritmos nulos para sinais residuais
+    if pgv_cm_s <= 0.1:
+        return 1.0  # MMI I
+        
+    # Fórmula empírica para intensidades moderadas a severas
+    mmi_calculado = 3.47 * math.log10(pgv_cm_s) + 2.35
+    
+    # Limitação aos limites físicos da escala (I a X)
+    return max(1.0, min(10.0, mmi_calculado))
 
 def classificar_mercalli(pgv_mm_s):
     """
-    Mapeia a Velocidade de Pico do Solo para a Escala de Mercalli Modificada.
-    Os limiares refletem a progressão logarítmica da energia dissipada,
-    convertendo medições instrumentais em perceção e impacto estrutural.
-    
-    Parâmetros:
-    pgv_mm_s : Velocidade de pico (mm/s). As equações empíricas originais
-               utilizam cm/s (1 cm/s = 10 mm/s).
-               
-    Retorna:
-    (grau_romano, classe_perigo) : O grau MMI e a sua descrição fenomenológica.
+    Mapeia o PGV calculando o valor logarítmico exato e retornando
+    o grau romano e a respetiva descrição fenomenológica.
     """
-    if pgv_mm_s < 1.0:
-        return "I", "Instrumental (Não sentido pela maioria das pessoas)"
-    elif pgv_mm_s < 11.0:
-        return "II - III", "Ligeiro (Sentido em repouso nos andares superiores)"
-    elif pgv_mm_s < 34.0:
-        return "IV", "Moderado (Sentido no interior; janelas tremem)"
-    elif pgv_mm_s < 81.0:
-        return "V", "Forte (Sentido no exterior; objetos caem)"
-    elif pgv_mm_s < 160.0:
-        return "VI", "Bastante Forte (Sentido por todos; danos em estuque)"
-    elif pgv_mm_s < 310.0:
-        return "VII", "Muito Forte (Danos ligeiros em estruturas correntes)"
-    elif pgv_mm_s < 600.0:
-        return "VIII", "Ruinoso (Danos severos; queda de chaminés e muros)"
-    else:
-        return "IX+", "Destrutivo (Danos estruturais generalizados / Colapso)"
-
-def validar_assinatura_sismica(pgv_mm_s, frequencia_dominante):
-    """
-    Filtro de falsos positivos para garantir que um impacto local de alta
-    frequência (ex: queda de um objeto pesado junto ao sensor) não é
-    classificado como um evento sísmico regional.
+    # 1. Obter o valor numérico exato através da fórmula logarítmica
+    mmi_valor = equacao_wald_mercalli(pgv_mm_s)
     
-    Retorna um booleano de validação e a mensagem de estado.
-    """
-    # Sismos libertam energia predominantemente em baixas frequências.
-    # Impactos mecânicos locais geram picos transientes de alta frequência.
-    if frequencia_dominante > 20.0 and pgv_mm_s < 34.0:
-        return False, "Rejeitado: Anomalia Local / Ruído de Alta Frequência"
+    # 2. Arredondar para o Grau de Intensidade mais próximo
+    grau_inteiro = round(mmi_valor)
     
-    return True, "Assinatura Sísmica Regional Validada"
+    # 3. Mapear para a nomenclatura romana e fenomenológica
+    escaloes = {
+        1: ("I", "Instrumental (Não sentido)"),
+        2: ("II", "Ligeiro (Sentido em repouso)"),
+        3: ("III", "Ligeiro (Sentido no interior)"),
+        4: ("IV", "Moderado (Janelas tremem)"),
+        5: ("V", "Forte (Sentido no exterior)"),
+        6: ("VI", "Bastante Forte (Danos em estuque)"),
+        7: ("VII", "Muito Forte (Danos ligeiros estruturais)"),
+        8: ("VIII", "Ruinoso (Queda de muros)"),
+        9: ("IX", "Destrutivo (Danos severos generalizados)"),
+        10: ("X+", "Desastroso (Colapso eminente)")
+    }
+    
+    # Garante que não falha se o grau for muito alto ou muito baixo
+    grau_romano, descricao = escaloes.get(grau_inteiro, ("Out of Bounds", "Erro de Escala"))
+    
+    return grau_romano, descricao, mmi_valor
