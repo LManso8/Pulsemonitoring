@@ -31,12 +31,12 @@ The architecture is built upon a modular, event-driven pipeline. This ensures hi
 
 ## Main Modules
 
-### 1. Acquisition & Ingestion Engine
+### 1. Acquisition
 Handles the asynchronous reading of the continuous CSV data stream.
 * **Live Feed Polling:** Implements a non-blocking background loop that scans for new hardware triggers without halting the main thread.
 * **Temporal Reconstruction:** Intercepts relative hardware uptime payloads (MM:SS.f) and fuses them with the system's absolute clock, reconstructing high-precision timestamps (down to the millisecond) while avoiding Base-60 math errors.
 
-### 2. Digital Signal Processing (DSP)
+### 2. Digital Signal Processing
 Transforms the raw physical data into mathematically viable dimensions using the `scipy` and `numpy` stacks.
 * **Kinematic Integration:** Converts triaxial raw acceleration (m/s²) into structural velocity (mm/s) via cumulative numerical integration.
 * **Drift Mitigation:** Applies linear detrending filters to eliminate cumulative algorithmic drift and hardware offset, anchoring the baseline to the zero-axis.
