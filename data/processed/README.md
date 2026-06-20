@@ -31,14 +31,6 @@ numerical exports.
   and its FFT amplitude spectrum, with the resulting Modified Mercalli
   Intensity classification.
 
-### Code reference snippets
-* `snippet_1_soma_cumulativa.png` — Highlights the cumulative-sum
-  integration line (`np.cumsum(accel_ms2) * dt`) in
-  `converter_aceleracao_para_velocidade`.
-* `snippet_2_remocao_drift.png` — Highlights the drift-removal line
-  (`detrend(vel_m_s)`).
-* `snippet_3_conversao_unidades.png` — Highlights the unit-conversion line
-  (`* 1000.0`, m/s to mm/s).
 
 ## Important caveat on the measured values shown
 
