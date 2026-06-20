@@ -10,13 +10,11 @@ the reasoning behind them.
 - MicroPython support allows fast iteration on firmware logic without a
   full embedded C/C++ toolchain.
 
-## Why 475 Hz sampling rate
+## Why High-Frequency Sampling (~475 Hz Hardware Target)
 
-- High enough to resolve impact and structural vibration events (which
-  typically have dominant content well under 100 Hz) with comfortable
-  margin for FFT resolution.
-- Low enough to keep the I2C read loop and Wi-Fi batch transmission stable
-  on the Pico W without dropped samples.
+- High enough to resolve impact and structural vibration events (which typically exhibit dominant resonance well under 100 Hz) providing a Nyquist–Shannon safety margin for FFT resolution.
+- Low enough to keep the I2C read loop and Wi-Fi batch transmission stable.
+- **Architectural decoupling:** While the hardware targets 475 Hz, the Python DSP pipeline computes the effective Sample Rate dynamically based on the ingested timestamps, ensuring algorithmic stability even if network latency drops the effective rate closer to 250 Hz.
 
 ## Why a dedicated Flask server (servidor.py) instead of writing the CSV from the firmware directly
 
