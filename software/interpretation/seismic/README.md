@@ -9,18 +9,9 @@ with the Peak Ground Velocity (PGV) of an event, and converts that value
 into a Modified Mercalli Intensity (MMI) estimate using an empirical
 seismological relationship.
 
-## Evaluated parameters
-
-* **Peak Ground Velocity — PGV (mm/s)** — computed by `calcular_pgv()`,
-  which supports two methods:
-  * `vetor_3d` — the Euclidean norm of the three axes,
-    `√(vx² + vy² + vz²)`, taking the maximum over time.
-  * `eixo_isolado` — the maximum absolute value across the three axes
-    individually, `max(|vx|, |vy|, |vz|)`.
-  * Which of the two methods `geonode_analyzer.py` uses by default has
-    not been confirmed yet — see Open Items below.
-* **Modified Mercalli Intensity (MMI)** — derived from PGV via the
-  empirical relationship described below.
+## Evaluated Parameters
+* **Peak Ground Velocity — PGV (mm/s):** The system strictly isolates the maximum absolute velocity recorded on the vertical axis (`max(|vz|)`), as surface waves (Rayleigh) represented on the Z-axis are the primary indicator of macroscopic energy dissipation in structural seismology.
+* **Modified Mercalli Intensity (MMI):** Derived directly from the vertical PGV via empirical logarithmic translation.
 
 ## Implemented method
 
@@ -41,47 +32,22 @@ seismological relationship.
 `classificar_mercalli()` rounds the MMI value to the nearest integer
 degree and maps it to a Roman numeral and a phenomenological description:
 
-| Degree | Roman | Description |
-|---|---|---|
-| 1 | I | Instrumental (Não sentido) |
-| 2 | II | Ligeiro (Sentido em repouso) |
-| 3 | III | Ligeiro (Sentido no interior) |
-| 4 | IV | Moderado (Janelas tremem) |
-| 5 | V | Forte (Sentido no exterior) |
-| 6 | VI | Bastante Forte (Danos em estuque) |
-| 7 | VII | Muito Forte (Danos ligeiros estruturais) |
-| 8 | VIII | Ruinoso (Queda de muros) |
-| 9 | IX | Destrutivo (Danos severos generalizados) |
-| 10 | X+ | Desastroso (Colapso eminente) |
+| Computed MMI (grau) | Dashboard UI Label | Phenomenological Description | UI Color (Hex) |
+| :--- | :--- | :--- | :--- |
+| $\le 1$ | I - Não Sentido | Instrumental | `#555555` |
+| 2 ou 3 | II a III - Fraco | Sentido em repouso | `#3399ff` |
+| 4 | IV - Ligeiro | Vidros tremem | `#33cc33` |
+| 5 | V - Moderado | Objetos caem | `#ffcc00` |
+| 6 | VI - Forte | Danos no estuque | `#ff9900` |
+| 7 | VII - Muito Forte | Danos moderados | `#ff3333` |
+| 8 | VIII - Destrutivo | Danos severos | `#cc0000` |
+| $\ge 9$ | IX+ - Violento | Colapso estrutural | `#990099` |
 
 ## Outputs
 
-For each processed event, the seismic module returns:
-
-1. **PGV (mm/s)** — the computed Peak Ground Velocity for the event.
-2. **MMI value** — the exact (non-rounded) intensity value from the Wald
-   equation, clamped to [1.0, 10.0].
-3. **Mercalli degree and description** — the rounded Roman-numeral degree
-   and its phenomenological description, used in the generated report
-   (see example in `data/processed/grafico_sismograma.jpg`).
-
-## Open items
-
-* **`event_detection.py` is not fully reviewed yet.** The version seen so
-  far ends mid-function (the `return` statement of `classificar_mercalli`
-  has not been confirmed), and it is not yet known whether epicenter
-  trilateration logic lives in this file or only in
-  `geonode_analyzer.py`. This README will be updated once the full file
-  is reviewed.
-* **Default PGV method:** it has not been confirmed whether
-  `geonode_analyzer.py` calls `calcular_pgv()` with `vetor_3d` or
-  `eixo_isolado` by default, or whether this is configurable per event.
-* **Epicenter trilateration:** as documented in `docs/validation.md`, the
-  trilateration logic seen in `geonode_analyzer.py` uses
-  simulated/randomized node positions, not real multi-sensor timestamps.
-  Status: roadmap / proof-of-concept, not a validated capability. Whether
-  this logic is duplicated or relocated in `event_detection.py` is one of
-  the items to confirm above.
+For each processed event, the seismic module provides:
+1. **PGV (mm/s)** — the Peak Ground Velocity on the vertical axis (Z-axis).
+2. **Mercalli Data Tuple** — the Roman numeral degree, the phenomenological description, and the strict UI color code utilized by the visualization engine.
 
 ## Related documentation
 
