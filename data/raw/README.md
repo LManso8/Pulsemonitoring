@@ -8,17 +8,26 @@ acquisition pipeline — the same data written by `servidor.py` to
 been committed yet; this README documents the schema and the testing
 context so the format is clear once files are added.
 
-## Data schema
+## Data Schema & Metadata
+
+* **Sampling Frequency:** Hardware-dependent and dynamically calculated per event. The ingestion engine computes the true Sample Rate via the $\Delta t$ mean of the recorded timestamps, falling back to a 250 Hz safety default only if temporal resolution is degraded.
+* **Timestamp Format:** Reconstructed Local Time (`DD/MM HH:MM:SS.fff`) executed by the ingestion engine to avoid Base-60 math errors.
 
 All files follow the same column structure as `eventos/amostras.csv`:
 
 | Column | Description |
 |---|---|
-| `evento_id` | Sequential integer identifying the vibration event (assigned by `servidor.py`) |
-| `data_hora_evento` | Reconstructed wall-clock timestamp of the event |
-| `t_ms` | Time elapsed since the start of the event, in milliseconds |
-| `ax_ms2`, `ay_ms2`, `az_ms2` | Raw acceleration along the X, Y, and Z axes, in m/s² |
-| `dx_ms2`, `dy_ms2`, `dz_ms2` | Reserved columns, not currently populated (no secondary sensor in the current hardware — see `docs/software.md`) |
+| `evento_id` | Sequential integer identifying the triggered vibration event. |
+| `data_hora_evento` | Reconstructed high-precision wall-clock timestamp (Day/Month Time). |
+| `t_ms` | Relative elapsed time since the hardware trigger threshold, in milliseconds. |
+| `ax_ms2`, `ay_ms2`, `az_ms2` | Raw triaxial acceleration along the X, Y, and Z axes ($m/s^2$). |
+| `dx`, `dy`, `dz` | Reserved telemetry columns (Unpopulated/Raw). Kept for future hardware iterations involving secondary sensors (e.g., gyroscope or direct displacement). |
+
+## Testing Context (Current Status)
+The events used during development to validate the DSP pipeline (see `docs/validation.md`) were generated through **uncalibrated near-field impulse testing** (e.g., direct mechanical impacts adjacent to the sensor array).
+
+## Testing Context (Current Status)
+The events used during development to validate the DSP pipeline (see `docs/validation.md`) were generated through **uncalibrated near-field impulse testing** (e.g., direct mechanical impacts adjacent to the sensor array).
 
 ## Testing context (current status)
 
