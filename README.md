@@ -68,4 +68,4 @@ The pipeline avoids continuous streaming bottlenecks by utilizing batched event 
 
 ## Authors
 **Afonso Geraldes; Catalin Calin; Colin Pontes; Daméin Kosta; Diogo Vieira; Edmila Zanga; Lucas Manso; Martim Pereira; Pedro Gama; Thamirez do Rosário**
-Developed as part of the Integrated Project in Mining and Energy Resources Engineering at **Instituto Superior Técnico (IST)**.
+### Developed as part of the Integrated Project in Mining and Energy Resources Engineering at **Instituto Superior Técnico (IST)**.
