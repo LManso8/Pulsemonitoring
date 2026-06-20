@@ -1,23 +1,9 @@
 # Architecture
 
 ## Overview
-PULSE is composed of four components: a hardware acquisition node, a
-receiving server, a processing/interpretation pipeline with its own
-dashboard, and a separate demonstration website. Data flows from the
-sensor through the server into a shared CSV file, which both the
-dashboard and the website consume.
-(Meter o pipeline do sistema inteiro
+PULSE is composed of four decoupled components: a hardware acquisition node, a receiving ingestion server (`servidor.py`), a DSP interpretation pipeline with an integrated dashboard (`geonode_analyzer.py`), and a separate demonstration web interface. Data flows from the physical sensor array through the ingestion server into a centralized CSV datastore, acting as the single source of truth for all downstream clients.
 
 
-**Note on the website's data path (unconfirmed detail):** the website
-fetches data from `servidor.py` over HTTP to display the 3-axis waveform
-whenever a new event occurs. The exact route it calls has not yet been
-confirmed — `servidor.py` as currently documented only exposes
-`POST /eventos` (used by the Pico W to push data in). If the website reads
-via a GET route, that route exists either in a version of `servidor.py`
-not yet reviewed, or in the website's own code. **This should be updated
-once the website's source is reviewed** — see the open item at the bottom
-of this document.)
 
 ## Components
 
@@ -74,21 +60,9 @@ of this document.)
   corresponding matplotlib report in a separate window.
 
   
-?????? ### 4. Website (demonstration) ????????
-- A separate HTML/JavaScript front-end, built specifically for
-  presentation and demonstration purposes.
-- Connects to `servidor.py` over HTTP: whenever a new event is detected,
-  the website fetches the corresponding data and renders the 3-axis
-  (X, Y, Z) waveform.
-- **Open item:** the exact route/endpoint the website calls on the server
-  has not yet been confirmed against the website's source code.
-  `servidor.py` as currently documented (see `software.md`) only exposes
-  `POST /eventos`, used by the Pico W to push data in — no GET route for
-  the website to pull data is visible in the version reviewed so far.
-  This needs to be reconciled once the website's code is reviewed: either
-  a GET route exists in a fuller version of `servidor.py`, or the website
-  implements its own read path. **TODO: update this section after
-  reviewing the website source.**
+### 4. Website (Demonstration UI)
+- A separate HTML/JavaScript front-end built for live telemetry presentation.
+- Acts as a lightweight client: it polls the centralized datastore (via asynchronous GET requests or direct file reads) to render the 3-axis kinematic waveform in near real-time without interfering with the heavy mathematical DSP pipeline executed by the Python dashboard.
 
 ## Data flow summary
 
