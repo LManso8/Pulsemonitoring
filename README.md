@@ -3,7 +3,7 @@
 ## Overview
 PULSE is an open-source vibration monitoring and seismic detection system designed for urban, industrial, and mining environments. 
 
-The system leverages a decoupled and flexible architecture—combining a MicroPython-based hardware acquisition node with a Python-powered Digital Signal Processing (DSP) engine—to acquire, clean, and evaluate triaxial kinematic data. While fully extensible for future telemetry applications, its current operational modules prioritize environmental structural compliance and macro-seismic hazard analysis.
+The system leverages a decoupled and flexible architecture, combining a MicroPython-based hardware acquisition node with a Python-powered Digital Signal Processing (DSP) engine, to acquire, clean, and evaluate triaxial kinematic data. While fully extensible for future telemetry applications, its current operational modules prioritize environmental structural compliance and macro-seismic hazard analysis.
 
 The project aims to provide a low-cost, portable, and mathematically rigorous solution for structural compliance auditing and seismic hazard detection.
 
