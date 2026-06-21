@@ -9,6 +9,9 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY ?? 'sb_publishable_8dc3LX
 const MAX_PONTOS = 300
 const DEADZONE   = 0.05   // m/s²
 
+// Header necessário para o ngrok não bloquear pedidos com a página de aviso
+const NGROK_HEADERS = { 'ngrok-skip-browser-warning': 'true' }
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
 // ─── Utilitários ───────────────────────────────────────────────────────────────
@@ -79,10 +82,13 @@ export function SeismicProvider({ children }) {
       })
   }, [adicionarAmostras])
 
-  // SSE — tempo real via Flask local (uma só ligação para toda a app)
+  // SSE — tempo real via Flask (local ou através do túnel ngrok)
   useEffect(() => {
     const ligar = () => {
-      const es = new EventSource(`${SERVER}/stream`)
+      // EventSource nativo não permite headers customizados, por isso
+      // passamos o "skip warning" do ngrok como parâmetro na URL
+      const url = `${SERVER}/stream?ngrok-skip-browser-warning=true`
+      const es  = new EventSource(url)
       evtRef.current = es
 
       es.onopen = () => { setLigado(true); setErro(null) }
