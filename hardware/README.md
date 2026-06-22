@@ -15,11 +15,12 @@ The physical subsystem data flow is structured as follows:
 Digital Accelerometer ──(I2C/SPI)──> Raspberry Pi Pico ──(SPI)──> Micro SD Card Module (.csv)
 
 ### Main Components
+<img width="2048" height="1852" alt="image" src="https://github.com/user-attachments/assets/699e8ede-f655-457a-a831-062fc70dabe8" />
 * **Microcontroller:** **Raspberry Pi Pico** – Serves as the central processing unit, managing sensor communication protocols, data formatting, and file-writing operations to the SD card.
 * **Vibration Sensor:** **Digital Accelerometer** – Captures dynamic motion data and transmits it directly via digital communication, eliminating the need for an external Analog-to-Digital Converter (ADC).
 * **Storage Module:** **MH-SD Card Module** – Enables local, reliable storage for logging real-time data into comma-separated values (CSV) format.
 * **Power Supply Unit (PSU):** **Switching Power Supply (SMPS)** – Regulates and converts grid voltage to a stable operating voltage required by the microcontroler and modules.
-* **Enclosure:** **3D Printed Case** – A custom-designed, compact housing to protect electronic components from environmental hazards and facilitate easy transportation (*Work in Progress*).
+* **Enclosure:** **3D Printed Case** – A custom-designed, compact housing to protect electronic components from environmental hazards and facilitate easy transportation.
 
 ### Design Objectives
 * **Cost-Efficiency:** Built using readily available, off-the-shelf components to minimize production barriers.
