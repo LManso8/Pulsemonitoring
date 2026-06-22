@@ -1,7 +1,7 @@
 #### 3D Design & Exploded Views
 
 **Perspective Exploded View**
-![Enclosure Perspective Exploded View](images/enclosure_perspective.png)
+![Enclosure Perspective View]("C:\Users\Lucas\Pictures\Screenshots\enclosure_perspective.png")
 
 **Top-Down Exploded View**
-![Enclosure Top-Down Exploded View](images/enclosure_top.png)
+![Enclosure Top-Down View]("C:\Users\Lucas\Pictures\Screenshots\enclosure_top.png")
