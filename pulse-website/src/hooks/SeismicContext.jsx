@@ -2,15 +2,11 @@ import { createContext, useContext, useEffect, useRef, useState, useCallback } f
 import { createClient } from '@supabase/supabase-js'
 
 // ─── Configuração ──────────────────────────────────────────────────────────────
-const SERVER       = import.meta.env.VITE_SERVER_URL ?? 'http://localhost:5000'
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? 'https://lyjlhimejffjbsefonqh.supabase.co'
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY ?? 'sb_publishable_8dc3LXKIAluAkGgH4kqDBQ_SJ2gC2QB'
 
 const MAX_PONTOS = 300
 const DEADZONE   = 0.05   // m/s²
-
-// Header necessário para o ngrok não bloquear pedidos com a página de aviso
-const NGROK_HEADERS = { 'ngrok-skip-browser-warning': 'true' }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
@@ -43,8 +39,6 @@ export function SeismicProvider({ children }) {
   const [totalAmostras, setTotal]  = useState(0)
   const [ultimoEvento,  setUltimo] = useState('—')
   const [erro,          setErro]   = useState(null)
-  const evtRef   = useRef(null)
-  const retryRef = useRef(null)
 
   const adicionarAmostras = useCallback((novas) => {
     setDados((prev) => [
@@ -82,37 +76,31 @@ export function SeismicProvider({ children }) {
       })
   }, [adicionarAmostras])
 
-  // SSE — tempo real via Flask (local ou através do túnel ngrok)
+  // Realtime Supabase — substitui o SSE do Flask
   useEffect(() => {
-    const ligar = () => {
-      // EventSource nativo não permite headers customizados, por isso
-      // passamos o "skip warning" do ngrok como parâmetro na URL
-      const url = `${SERVER}/stream?ngrok-skip-browser-warning=true`
-      const es  = new EventSource(url)
-      evtRef.current = es
+    const canal = supabase
+      .channel('amostras-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'amostras' },
+        (payload) => {
+          const r = payload.new
+          adicionarAmostras([{
+            evento_id: r.evento_id,
+            t:         r.data_hora,
+            ax:        r.ax_ms2 ?? 0,
+            ay:        r.ay_ms2 ?? 0,
+            az:        r.az_ms2 ?? 0,
+          }])
+        }
+      )
+      .subscribe((status) => {
+        setLigado(status === 'SUBSCRIBED')
+        if (status === 'SUBSCRIBED') setErro(null)
+        else setErro('Sem ligação ao Supabase Realtime…')
+      })
 
-      es.onopen = () => { setLigado(true); setErro(null) }
-
-      es.onmessage = (e) => {
-        try {
-          const payload = JSON.parse(e.data)
-          if (payload.tipo === 'amostras') adicionarAmostras(payload.dados)
-        } catch { /* ignora */ }
-      }
-
-      es.onerror = () => {
-        setLigado(false)
-        setErro('Sem ligação ao servidor — a tentar novamente…')
-        es.close()
-        retryRef.current = setTimeout(ligar, 3000)
-      }
-    }
-
-    ligar()
-    return () => {
-      evtRef.current?.close()
-      clearTimeout(retryRef.current)
-    }
+    return () => { supabase.removeChannel(canal) }
   }, [adicionarAmostras])
 
   // waveformData: buffer sempre com MAX_PONTOS entradas
