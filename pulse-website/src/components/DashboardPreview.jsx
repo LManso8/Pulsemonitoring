@@ -5,7 +5,7 @@ import {
   AreaChart, Area, XAxis, YAxis, BarChart, Bar,
   ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from 'recharts'
-import { Activity, ExternalLink, Maximize2, WifiOff } from 'lucide-react'
+import { Activity, ExternalLink, Maximize2 } from 'lucide-react'
 import { useSeismic } from '../hooks/SeismicContext'
 
 const Y_RANGE   = 2.0
@@ -18,7 +18,7 @@ const SENSORS_MOCK = [
   { id: 'PULSE-004', loc: 'Planned',          status: 'offline' },
 ]
 
-// ─── Mini sismógrafo — exactamente os mesmos dados do Dashboard ───────────────
+// ─── Mini sismógrafo ───────────────────────────────────────────────────────────
 function MiniWaveform() {
   const { waveformData } = useSeismic()
   const visible = waveformData.slice(-PREVIEW_N)
@@ -57,7 +57,7 @@ function MiniWaveform() {
   )
 }
 
-// ─── Energia por segmento derivada do buffer real ─────────────────────────────
+// ─── Energia por segmento ─────────────────────────────────────────────────────
 function MiniFFT() {
   const { waveformData } = useSeismic()
   const BINS = 16
@@ -91,8 +91,7 @@ export default function DashboardPreview() {
   const inView = useInView(ref, { once: true, margin: '-80px' })
   const [time, setTime] = useState(new Date().toLocaleTimeString())
 
-  // Dados directamente do contexto partilhado — sem SSE próprio
-  const { waveformData, ligado, totalAmostras, ultimoEvento, erro } = useSeismic()
+  const { waveformData, totalAmostras, ultimoEvento } = useSeismic()
 
   useEffect(() => {
     const t = setInterval(() => setTime(new Date().toLocaleTimeString()), 1000)
@@ -103,6 +102,7 @@ export default function DashboardPreview() {
   const azAtual = ultimoPonto?.az ?? 0
   const axAtual = ultimoPonto?.ax ?? 0
   const pico    = waveformData.reduce((acc, d) => Math.max(acc, Math.abs(d.az || 0)), 0)
+  const temDados = totalAmostras > 0
 
   return (
     <section id="dashboard" ref={ref} className="py-28 bg-pulse-dark relative overflow-hidden">
@@ -147,17 +147,6 @@ export default function DashboardPreview() {
               <span className="text-xs font-mono text-gray-500">pulse-monitor — preview</span>
             </div>
             <div className="flex items-center gap-3">
-              {ligado ? (
-                <span className="flex items-center gap-1.5 text-xs font-mono text-pulse-green">
-                  <span className="glow-dot-green" />
-                  LIVE
-                </span>
-              ) : (
-                <span className="flex items-center gap-1.5 text-xs font-mono text-red-400">
-                  <WifiOff size={10} />
-                  OFFLINE
-                </span>
-              )}
               <span className="text-xs font-mono text-gray-500">
                 {ultimoEvento !== '—' ? ultimoEvento : time}
               </span>
@@ -170,14 +159,6 @@ export default function DashboardPreview() {
               </Link>
             </div>
           </div>
-
-          {/* Aviso de erro compacto */}
-          {erro && (
-            <div className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border-b border-red-500/20 text-[10px] text-red-400 font-mono">
-              <WifiOff size={10} className="flex-shrink-0" />
-              {erro}
-            </div>
-          )}
 
           <div className="p-5 grid lg:grid-cols-3 gap-5">
             {/* ── Esquerda: lista de sensores ─────────────────────────────── */}
@@ -199,7 +180,7 @@ export default function DashboardPreview() {
                   >
                     <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
                       s.status === 'offline' ? 'bg-gray-600'
-                        : ligado ? 'bg-emerald-400' : 'bg-yellow-500'
+                        : temDados ? 'bg-emerald-400' : 'bg-yellow-500'
                     }`} />
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-semibold text-white font-mono">{s.id}</div>
@@ -246,9 +227,6 @@ export default function DashboardPreview() {
                   <div className="flex items-center gap-3 text-xs font-mono">
                     <span className="text-pulse-cyan">{azAtual.toFixed(4)} m/s²</span>
                     <span className="text-gray-600">pico {pico.toFixed(3)}</span>
-                    {ligado
-                      ? <span className="glow-dot-green w-1.5 h-1.5" />
-                      : <WifiOff size={10} className="text-red-400" />}
                   </div>
                 </div>
                 <MiniWaveform />
@@ -273,9 +251,9 @@ export default function DashboardPreview() {
                 <div className="bg-pulse-surface/60 rounded-2xl p-4 border border-white/8 flex flex-col gap-3">
                   <div className="text-xs font-semibold text-white mb-1">Node Stats</div>
                   {[
-                    { label: 'Online nodes', value: ligado ? '1/4' : '0/4', color: ligado ? 'text-emerald-400' : 'text-red-400' },
-                    { label: 'Sensor',       value: 'ADXL345',              color: 'text-pulse-cyan' },
-                    { label: 'Axes',         value: 'X · Y · Z',            color: 'text-pulse-cyan' },
+                    { label: 'Online nodes', value: temDados ? '1/4' : '0/4', color: temDados ? 'text-emerald-400' : 'text-gray-500' },
+                    { label: 'Sensor',       value: 'ADXL345',                color: 'text-pulse-cyan' },
+                    { label: 'Axes',         value: 'X · Y · Z',              color: 'text-pulse-cyan' },
                     { label: 'AX actual',    value: `${axAtual.toFixed(4)} m/s²`, color: 'text-blue-400' },
                     { label: 'AZ actual',    value: `${azAtual.toFixed(4)} m/s²`, color: 'text-amber-400' },
                   ].map((s) => (
@@ -291,7 +269,7 @@ export default function DashboardPreview() {
 
           <div className="px-5 py-2.5 bg-pulse-surface/60 border-t border-white/5 flex items-center justify-between">
             <span className="text-[10px] font-mono text-gray-600">
-              PULSE v1.0 — {ligado ? 'Dados em directo · ADXL345' : 'Sem ligação ao sensor'}
+              PULSE v1.0 · ADXL345 · Supabase
             </span>
             <Link
               to="/dashboard"

@@ -1,12 +1,12 @@
 import { useRef, useEffect, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Activity, Wifi, WifiOff, ArrowLeft, Database, Cpu, Zap } from 'lucide-react'
+import { Activity, ArrowLeft, Database, Cpu, Zap } from 'lucide-react'
 import { useSeismic } from '../hooks/SeismicContext'
 
 // ─── Configuração do sismógrafo ────────────────────────────────────────────────
 const JANELA_S  = 10     // segundos visíveis na janela
 const Y_RANGE   = 20     // m/s² — metade da escala do eixo Y
-const DEADZONE  = 0.05    // m/s² — ruído abaixo disto é zero (já aplicado no contexto)
+const DEADZONE  = 0.05    // m/s²
 
 const CORES = {
   ax: '#3B82F6',
@@ -15,15 +15,10 @@ const CORES = {
 }
 
 // ─── Canvas Sismógrafo ─────────────────────────────────────────────────────────
-// Desenha num canvas a cada requestAnimationFrame.
-// A posição X de cada ponto é calculada a partir do timestamp real da amostra
-// relativo ao "agora" — por isso o gráfico desliza continuamente para a esquerda
-// mesmo sem chegarem dados novos.
 function SismografoCanvas({ dados, eixo, cor, label }) {
   const canvasRef = useRef(null)
   const rafRef    = useRef(null)
 
-  // Guarda os dados num ref para o loop de animação ler sempre a versão mais recente
   const dadosRef = useRef(dados)
   useEffect(() => { dadosRef.current = dados }, [dados])
 
@@ -36,7 +31,6 @@ function SismografoCanvas({ dados, eixo, cor, label }) {
     const H    = canvas.clientHeight
     if (W === 0 || H === 0) { rafRef.current = requestAnimationFrame(desenhar); return }
 
-    // Ajusta resolução ao DPR (ecrãs retina)
     if (canvas.width !== W * dpr || canvas.height !== H * dpr) {
       canvas.width  = W * dpr
       canvas.height = H * dpr
@@ -55,13 +49,11 @@ function SismografoCanvas({ dados, eixo, cor, label }) {
     const mid   = PAD_T + plotH / 2
     const agora = Date.now()
 
-    // Fundo subtil
     ctx.fillStyle = 'rgba(255,255,255,0.015)'
     ctx.beginPath()
     ctx.roundRect(0, 0, W, H, 12)
     ctx.fill()
 
-    // ── Grelha e eixo Y ──────────────────────────────────────────────────────
     const yTicks = [-Y_RANGE, -Y_RANGE / 2, 0, Y_RANGE / 2, Y_RANGE]
     ctx.font = '9px monospace'
     ctx.textAlign = 'right'
@@ -79,8 +71,6 @@ function SismografoCanvas({ dados, eixo, cor, label }) {
       ctx.stroke()
     })
 
-    // ── Marcas de tempo no eixo X ─────────────────────────────────────────────
-    // Linhas verticais a cada 5 segundos, com o label a contar para trás
     ctx.textAlign = 'center'
     ctx.fillStyle = 'rgba(107,114,128,0.7)'
     for (let s = 0; s <= JANELA_S; s += 5) {
@@ -94,10 +84,8 @@ function SismografoCanvas({ dados, eixo, cor, label }) {
       ctx.fillText(s === 0 ? 'agora' : `-${s}s`, x, H - 5)
     }
 
-    // ── Linha do sinal ────────────────────────────────────────────────────────
     const amostras = dadosRef.current
     if (!amostras || amostras.length < 2) {
-      // Sem dados: linha plana no zero
       ctx.beginPath()
       ctx.strokeStyle = cor
       ctx.lineWidth   = 1.5
@@ -108,7 +96,6 @@ function SismografoCanvas({ dados, eixo, cor, label }) {
       return
     }
 
-    // Converte cada amostra para coordenadas (X baseado em timestamp real)
     const pontos = amostras
       .map(d => {
         if (!d.t) return null
@@ -124,7 +111,6 @@ function SismografoCanvas({ dados, eixo, cor, label }) {
       .filter(Boolean)
 
     if (pontos.length < 2) {
-      // Dados fora da janela: linha plana
       ctx.beginPath()
       ctx.strokeStyle = cor
       ctx.lineWidth   = 1.5
@@ -135,13 +121,11 @@ function SismografoCanvas({ dados, eixo, cor, label }) {
       return
     }
 
-    // Linha do sinal com gradiente de preenchimento
     const grad = ctx.createLinearGradient(0, PAD_T, 0, PAD_T + plotH)
     grad.addColorStop(0,   cor + '30')
     grad.addColorStop(0.5, cor + '10')
     grad.addColorStop(1,   cor + '00')
 
-    // Área preenchida
     ctx.beginPath()
     ctx.moveTo(pontos[0].x, mid)
     pontos.forEach(p => ctx.lineTo(p.x, p.y))
@@ -150,7 +134,6 @@ function SismografoCanvas({ dados, eixo, cor, label }) {
     ctx.fillStyle = grad
     ctx.fill()
 
-    // Linha principal
     ctx.beginPath()
     ctx.strokeStyle = cor
     ctx.lineWidth   = 1.5
@@ -158,7 +141,6 @@ function SismografoCanvas({ dados, eixo, cor, label }) {
     pontos.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y))
     ctx.stroke()
 
-    // Ponto "agora" (última amostra visível)
     const ultimo = pontos[pontos.length - 1]
     ctx.beginPath()
     ctx.arc(ultimo.x, ultimo.y, 3, 0, Math.PI * 2)
@@ -168,7 +150,6 @@ function SismografoCanvas({ dados, eixo, cor, label }) {
     rafRef.current = requestAnimationFrame(desenhar)
   }, [cor, eixo])
 
-  // Inicia o loop de animação
   useEffect(() => {
     rafRef.current = requestAnimationFrame(desenhar)
     return () => cancelAnimationFrame(rafRef.current)
@@ -187,7 +168,6 @@ function SismografoCanvas({ dados, eixo, cor, label }) {
           {Number(ultimoValor).toFixed(4)} m/s²
         </span>
       </div>
-      {/* Canvas ocupa todo o espaço disponível — altura fixa, largura fluida */}
       <div style={{ width: '100%', height: 120, position: 'relative' }}>
         <canvas
           ref={canvasRef}
@@ -202,10 +182,8 @@ function SismografoCanvas({ dados, eixo, cor, label }) {
 export default function Dashboard() {
   const {
     dados,
-    ligado,
     totalAmostras,
     ultimoEvento,
-    erro,
   } = useSeismic()
 
   const ultimoPonto = dados[dados.length - 1]
@@ -242,36 +220,9 @@ export default function Dashboard() {
               PULSE-001 · ADXL345
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            {ligado ? (
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-pulse-green">
-                <span className="glow-dot-green" />
-                LIVE
-                <Wifi size={12} />
-              </span>
-            ) : (
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-red-400">
-                <WifiOff size={12} />
-                OFFLINE
-              </span>
-            )}
-            <span className="text-xs font-mono text-gray-500">{ultimoEvento}</span>
-          </div>
+          <span className="text-xs font-mono text-gray-500">{ultimoEvento}</span>
         </div>
       </div>
-
-      {/* ── Aviso de erro ──────────────────────────────────────────────────── */}
-      {erro && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-          <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-xs text-red-400">
-            <WifiOff size={14} className="flex-shrink-0" />
-            {erro}
-            <span className="ml-auto text-red-600">
-              Certifica-te de que o Servidor.py está a correr na porta 5000.
-            </span>
-          </div>
-        </div>
-      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
 
@@ -334,7 +285,7 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* ── Gráficos canvas (sismógrafo com rolo contínuo) ──────────────── */}
+        {/* ── Gráficos canvas ──────────────────────────────────────────────── */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold text-white">
@@ -393,10 +344,10 @@ export default function Dashboard() {
 
         {/* ── Rodapé ─────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between text-[10px] font-mono text-gray-600 pb-2">
-          <span>PULSE v1.0 · ADXL345 · Flask SSE</span>
+          <span>PULSE v1.0 · ADXL345 · Supabase</span>
           <span className="flex items-center gap-1.5">
             <Cpu size={10} />
-            Servidor: localhost:5000
+            Cloud: Supabase
           </span>
         </div>
       </div>
