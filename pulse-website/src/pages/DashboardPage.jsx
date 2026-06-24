@@ -4,7 +4,7 @@ import { Activity, ArrowLeft, Database, Cpu, Zap } from 'lucide-react'
 import { useSeismic } from '../hooks/SeismicContext'
 
 // ─── Configuração do sismógrafo ────────────────────────────────────────────────
-const JANELA_S  = 30     // segundos visíveis na janela
+const JANELA_S  = 10     // segundos visíveis na janela
 const Y_RANGE   = 20     // m/s² — metade da escala do eixo Y
 const DEADZONE  = 0.05    // m/s²
 
@@ -100,7 +100,6 @@ function SismografoCanvas({ dados, eixo, cor, label }) {
       .map(d => {
         if (!d.t) return null
         const ts = new Date(d.t).getTime()
-        console.log('[CANVAS] t:', d.t, 'ts:', ts, 'agora:', Date.now(), 'segsAtras:', (Date.now() - ts) / 1000)
         if (isNaN(ts)) return null
         const segsAtras = (agora - ts) / 1000
         if (segsAtras < 0 || segsAtras > JANELA_S) return null
@@ -169,10 +168,10 @@ function SismografoCanvas({ dados, eixo, cor, label }) {
           {Number(ultimoValor).toFixed(4)} m/s²
         </span>
       </div>
-      <div style={{ width: '100%', height: 120, position: 'relative' }}>
+      <div style={{ width: '80%', height: 120, position: 'relative' }}>
         <canvas
           ref={canvasRef}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+          style={{ position: 'absolute', inset: 0, width: '80%', height: '100%' }}
         />
       </div>
     </div>
