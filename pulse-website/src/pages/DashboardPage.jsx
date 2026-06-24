@@ -168,10 +168,10 @@ function SismografoCanvas({ dados, eixo, cor, label }) {
           {Number(ultimoValor).toFixed(4)} m/s²
         </span>
       </div>
-      <div style={{ width: '80%', height: 120, position: 'relative' }}>
+      <div style={{ width: '100%', height: 120, position: 'relative' }}>
         <canvas
           ref={canvasRef}
-          style={{ position: 'absolute', inset: 0, width: '80%', height: '100%' }}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
         />
       </div>
     </div>
@@ -299,9 +299,12 @@ export default function Dashboard() {
             )}
           </div>
 
-          <SismografoCanvas dados={dados} eixo="ax" cor={CORES.ax} label="Eixo X (AX)" />
-          <SismografoCanvas dados={dados} eixo="ay" cor={CORES.ay} label="Eixo Y (AY)" />
-          <SismografoCanvas dados={dados} eixo="az" cor={CORES.az} label="Eixo Z (AZ)" />
+          {/* Gráficos centrados a metade da largura */}
+          <div className="max-w-2xl mx-auto w-full flex flex-col gap-4">
+            <SismografoCanvas dados={dados} eixo="ax" cor={CORES.ax} label="Eixo X (AX)" />
+            <SismografoCanvas dados={dados} eixo="ay" cor={CORES.ay} label="Eixo Y (AY)" />
+            <SismografoCanvas dados={dados} eixo="az" cor={CORES.az} label="Eixo Z (AZ)" />
+          </div>
         </div>
 
         {/* ── Tabela das últimas amostras ─────────────────────────────────── */}

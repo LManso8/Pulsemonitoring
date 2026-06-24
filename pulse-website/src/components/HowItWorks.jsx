@@ -19,7 +19,7 @@ const steps = [
     icon: '🖥️',
     label: 'Pi Pico W',
     sublabel: 'Microcontroller',
-    desc: 'Raspberry Pi Pico W reads the ADXL345 via SPI, timestamps each sample with NTP-synchronized time, applies pre-processing, and manages data routing to storage and Wi-Fi.',
+    desc: 'Raspberry Pi Pico W reads the ADXL345 via I2C, timestamps each sample with NTP-synchronized time, applies pre-processing, and manages data routing to storage and Wi-Fi.',
     color: 'from-violet-600 to-violet-400',
     border: 'border-violet-500/30',
     badge: 'MCU',
