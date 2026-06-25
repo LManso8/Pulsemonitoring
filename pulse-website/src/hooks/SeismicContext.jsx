@@ -21,6 +21,18 @@ function labelCurto(t) {
   return partes[1]?.split('.')[0] ?? t
 }
 
+// Converte uma linha do Supabase para o formato interno
+// Usa dx/dy/dz (desvio face à baseline, sem gravidade) em vez de ax/ay/az
+function mapearAmostra(r) {
+  return {
+    evento_id: r.evento_id,
+    t:         r.data_hora,
+    ax:        r.dx_ms2 ?? 0,
+    ay:        r.dy_ms2 ?? 0,
+    az:        r.dz_ms2 ?? 0,
+  }
+}
+
 // Buffer sempre cheio (zeros à esquerda) — garante rolo contínuo no recharts
 export function withPadding(arr, size = MAX_PONTOS) {
   if (arr.length >= size) return arr
@@ -40,7 +52,6 @@ export function SeismicProvider({ children }) {
   const [ultimoEvento,  setUltimo] = useState('—')
   const [erro,          setErro]   = useState(null)
 
-  // Guarda o último evento_id visto para não buscar duplicados
   const ultimoIdRef = useRef(0)
 
   const adicionarAmostras = useCallback((novas) => {
@@ -58,26 +69,18 @@ export function SeismicProvider({ children }) {
     if (novas.length) setUltimo(labelCurto(novas[novas.length - 1].t))
   }, [])
 
-  // Histórico inicial — vem do Supabase
+  // Histórico inicial — usa dx/dy/dz
   useEffect(() => {
     supabase
       .from('amostras')
-      .select('evento_id, data_hora, ax_ms2, ay_ms2, az_ms2')
+      .select('evento_id, data_hora, dx_ms2, dy_ms2, dz_ms2')
       .order('evento_id', { ascending: false })
       .limit(MAX_PONTOS)
       .then(({ data, error }) => {
         if (error) { console.error('[SUPABASE]', error); return }
         if (!data?.length) return
-        // Guarda o evento_id mais recente para o Realtime saber de onde continuar
         ultimoIdRef.current = data[0].evento_id
-        const hist = data.reverse().map((r) => ({
-          evento_id: r.evento_id,
-          t:         r.data_hora,
-          ax:        r.ax_ms2 ?? 0,
-          ay:        r.ay_ms2 ?? 0,
-          az:        r.az_ms2 ?? 0,
-        }))
-        adicionarAmostras(hist)
+        adicionarAmostras(data.reverse().map(mapearAmostra))
       })
   }, [adicionarAmostras])
 
@@ -91,7 +94,7 @@ export function SeismicProvider({ children }) {
         async () => {
           const { data, error } = await supabase
             .from('amostras')
-            .select('evento_id, data_hora, ax_ms2, ay_ms2, az_ms2')
+            .select('evento_id, data_hora, dx_ms2, dy_ms2, dz_ms2')
             .order('evento_id', { ascending: true })
             .gt('evento_id', ultimoIdRef.current)
             .limit(50)
@@ -99,16 +102,8 @@ export function SeismicProvider({ children }) {
           if (error) { console.error('[SUPABASE REALTIME]', error); return }
           if (!data?.length) return
 
-          // Atualiza o último id visto
           ultimoIdRef.current = data[data.length - 1].evento_id
-
-          adicionarAmostras(data.map((r) => ({
-            evento_id: r.evento_id,
-            t:         r.data_hora,
-            ax:        r.ax_ms2 ?? 0,
-            ay:        r.ay_ms2 ?? 0,
-            az:        r.az_ms2 ?? 0,
-          })))
+          adicionarAmostras(data.map(mapearAmostra))
         }
       )
       .subscribe((status) => {
@@ -120,7 +115,6 @@ export function SeismicProvider({ children }) {
     return () => { supabase.removeChannel(canal) }
   }, [adicionarAmostras])
 
-  // waveformData: buffer sempre com MAX_PONTOS entradas
   const waveformData = withPadding(dados, MAX_PONTOS)
 
   return (
