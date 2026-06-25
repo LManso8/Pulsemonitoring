@@ -5,7 +5,7 @@ import { useSeismic } from '../hooks/SeismicContext'
 
 // ─── Configuração do sismógrafo ────────────────────────────────────────────────
 const JANELA_S  = 10     // segundos visíveis na janela
-const Y_RANGE   = 20     // m/s² — metade da escala do eixo Y
+const Y_RANGE   = 10     // m/s² — metade da escala do eixo Y
 const DEADZONE  = 0.05    // m/s²
 
 const CORES = {
